@@ -12,10 +12,8 @@ to generate this file without the comments in this block.
 -}
 { name = "my-project"
 , dependencies =
-  [ "aff"
-  , "arrays"
+  [ "arrays"
   , "console"
-  , "either"
   , "effect"
   , "node-buffer"
   , "node-fs"
