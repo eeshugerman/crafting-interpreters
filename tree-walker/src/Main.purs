@@ -3,10 +3,11 @@ module Main where
 import Prelude
 
 import Data.Array (drop)
-import Data.Either (either)
+import Data.Either (Either(..))
 import Effect (Effect)
-import Effect.Aff (makeAff, nonCanceler, runAff_)
-import Effect.Console (log, errorShow)
+import Effect.Aff (Aff, Error, runAff_)
+import Effect.Class (liftEffect)
+import Effect.Console (log)
 import Node.Encoding as Encoding
 import Node.FS.Sync (readTextFile)
 import Node.Path (FilePath)
@@ -26,21 +27,27 @@ runFile filePath = do
 runPrompt :: Effect Unit
 runPrompt = do
   interface <- RL.createConsoleInterface RL.noCompletion
-  runAff_
-    -- (either
-    --  (\err -> errorShow err *> RL.close interface)
-    --  (const $ RL.close interface))
-    \foo -> case foo of
-      Left err -> errorShow err *> RL.close interface
-    (loop interface)
+  loop interface
 
   where
-    loop interface = do
-      RL.setPrompt ">>>" interface
-      line <- RL.prompt interface
+    lineHandler :: String -> Effect Unit
+    lineHandler line = do
       log $ "got line: " <> line
 
+    loop :: RL.Interface -> Effect Unit
+    loop interface = do
+      RL.setPrompt ">>> " interface
+      RL.setLineHandler lineHandler interface
+      let
+        callback :: Either Error Unit -> Effect Unit
+        callback (Left err) = do
+          log $ show err
+        callback (Right _) = do
+          loop interface
 
+        aff :: Aff Unit
+        aff = liftEffect $ RL.prompt interface
+      runAff_ callback aff
 
 
 main :: Effect Unit
