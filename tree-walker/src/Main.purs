@@ -3,6 +3,7 @@ module Main where
 import Prelude
 
 import Data.Array (drop)
+import Data.Either as Either
 import Effect (Effect)
 import Effect.Console (log)
 import Node.Encoding as Encoding
@@ -25,8 +26,8 @@ runPrompt = do
   let lineHandler :: String -> Effect Unit
       lineHandler line = do
         log $ case readExpr line of
-          Left err -> show err
-          Right tree -> show tree
+          Either.Left err -> show err
+          Either.Right tree -> show tree
         RL.prompt interface
   RL.setPrompt ">>> " interface
   RL.setLineHandler lineHandler interface
