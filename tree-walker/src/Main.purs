@@ -11,6 +11,8 @@ import Node.Path (FilePath)
 import Node.Process (argv, exit)
 import Node.ReadLine as RL
 
+import Lex (readExpr)
+
 runFile :: FilePath -> Effect Unit
 runFile filePath = do
   source <- readTextFile Encoding.UTF8 filePath
@@ -22,7 +24,9 @@ runPrompt = do
   interface <- RL.createConsoleInterface RL.noCompletion
   let lineHandler :: String -> Effect Unit
       lineHandler line = do
-        log $ "got line: " <> line
+        log $ case readExpr line of
+          Left err -> show err
+          Right tree -> show tree
         RL.prompt interface
   RL.setPrompt ">>> " interface
   RL.setLineHandler lineHandler interface
