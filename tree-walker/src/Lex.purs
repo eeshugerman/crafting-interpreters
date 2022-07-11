@@ -1,9 +1,8 @@
-module Lex (Expr, readExpr) where
+module Lex (Expr(..), readExpr, Literal(..), Op(..)) where
 
 import Prelude
 
 import Control.Alt ((<|>))
-import Control.Lazy (fix)
 import Control.Lazy as Lazy
 import Data.Either as Either
 import Data.Generic.Rep (class Generic)
@@ -11,8 +10,9 @@ import Data.Identity (Identity)
 import Data.Int (toNumber)
 import Data.Show.Generic (genericShow)
 import Parsing as P
+import Parsing.Combinators (try)
 import Parsing.Language as L
-import Parsing.String (char)
+import Parsing.String (char, eof)
 import Parsing.String.Basic (alphaNum, letter)
 import Parsing.Token as T
 
@@ -113,7 +113,7 @@ lexer :: T.GenTokenParser String Identity
 lexer = T.makeTokenParser style
 
 parseOp :: P.Parser String Op
-parseOp = do
+parseOp = try $ do
   lexer.reservedOp "-" *> pure Minus
     <|> lexer.reservedOp "+" *> pure Plus
     <|> lexer.reservedOp "/" *> pure Slash
@@ -140,13 +140,13 @@ parseNumber = do
     Either.Right val' -> val'
 
 parseUnaryExpr :: P.Parser String Expr -> P.Parser String Expr
-parseUnaryExpr p = do
+parseUnaryExpr p = try $ do
   op <- parseOp
   expr <- p
   pure $ UnaryExpr op expr
 
 parseBinaryExpr :: P.Parser String Expr -> P.Parser String Expr
-parseBinaryExpr p = do
+parseBinaryExpr p = try $ do
   a <- p
   op <- parseOp
   b <- p
@@ -154,16 +154,16 @@ parseBinaryExpr p = do
 
 parseGroupingExpr :: P.Parser String Expr -> P.Parser String Expr
 parseGroupingExpr p = do
-  expr <- lexer.parens p
+  expr <- try $ lexer.parens p
   pure $ GroupingExpr expr
 
 parseExpr :: P.Parser String Expr
 parseExpr = Lazy.fix $ \p ->
-  parseUnaryExpr p
-    <|> parseGroupingExpr p
-    <|> parseBinaryExpr p
-    <|> parseBool
+  parseBool
     <|> parseNumber
+    <|> parseGroupingExpr p
+    <|> parseUnaryExpr p
+    <|> parseBinaryExpr p
 
 readExpr :: String -> Either.Either P.ParseError Expr
-readExpr s = P.runParser s parseExpr
+readExpr input = P.runParser input parseExpr

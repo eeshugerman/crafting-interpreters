@@ -6,13 +6,13 @@ import Data.Array (drop)
 import Data.Either as Either
 import Effect (Effect)
 import Effect.Console (log)
+import Lex (readExpr)
 import Node.Encoding as Encoding
 import Node.FS.Sync (readTextFile)
 import Node.Path (FilePath)
 import Node.Process (argv, exit)
 import Node.ReadLine as RL
-
-import Lex (readExpr)
+import Parsing (parseErrorMessage)
 
 runFile :: FilePath -> Effect Unit
 runFile filePath = do
@@ -26,7 +26,7 @@ runPrompt = do
   let lineHandler :: String -> Effect Unit
       lineHandler line = do
         log $ case readExpr line of
-          Either.Left err -> show err
+          Either.Left err -> "Parse Error: " <> parseErrorMessage err
           Either.Right tree -> show tree
         RL.prompt interface
   RL.setPrompt ">>> " interface
