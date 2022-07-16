@@ -54,6 +54,10 @@ derive instance genericOp :: Generic Op _
 instance showOp :: Show Op where
   show = genericShow
 
+derive instance eqExpr :: Eq Expr
+derive instance eqLiteral :: Eq Literal
+derive instance eqOp :: Eq Op
+
 style :: T.LanguageDef
 style = T.LanguageDef (T.unGenLanguageDef L.emptyDef)
   { commentStart = "/*"
