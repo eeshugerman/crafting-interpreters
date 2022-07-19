@@ -10,7 +10,7 @@ import Data.Identity (Identity)
 import Data.Int (toNumber)
 import Data.Show.Generic (genericShow)
 import Parsing as P
-import Parsing.Combinators (try, (<?>))
+import Parsing.Combinators (notFollowedBy, try, (<?>))
 import Parsing.Expr (buildExprParser)
 import Parsing.Language as L
 import Parsing.String (char, eof)
@@ -20,7 +20,7 @@ import Parsing.Token as T
 data Expr
   = Literal Literal
   | UnaryExpr UnaryOp Expr
-  | BinaryExpr Expr BinaryOp Expr
+  | BinaryExpr BinaryOp Expr Expr
   | GroupingExpr Expr
 
 data Literal
@@ -146,12 +146,13 @@ parseBool = do
     <|> (lexer.reserved "false" *> (pure $ Literal $ LoxBool false))
 
 parseNumber :: P.Parser String Expr
-parseNumber =
-  map (Literal <<< LoxNumber)
-    $ try lexer.float
-        <|> try (char '+' *> lexer.float)
-        <|> try (char '-' *> (map negate lexer.float))
-        <|> try (map toNumber lexer.integer)
+parseNumber = try $ do
+  num <- try lexer.float
+    <|> try (char '+' *> lexer.float)
+    <|> try (char '-' *> (map negate lexer.float))
+    <|> try (map toNumber lexer.integer)
+  -- notFollowedBy parseBinaryOp
+  pure $ Literal $ LoxNumber num
 
 parseUnaryExpr :: P.Parser String Expr -> P.Parser String Expr
 parseUnaryExpr p = try $ do
@@ -160,11 +161,11 @@ parseUnaryExpr p = try $ do
   pure $ UnaryExpr op expr
 
 parseBinaryExpr :: P.Parser String Expr -> P.Parser String Expr
-parseBinaryExpr p = try $ do
+parseBinaryExpr p = do
   a <- p
   op <- parseBinaryOp
   b <- p
-  pure $ BinaryExpr a op b
+  pure $ BinaryExpr op a b
 
 parseGroupingExpr :: P.Parser String Expr -> P.Parser String Expr
 parseGroupingExpr p = do
