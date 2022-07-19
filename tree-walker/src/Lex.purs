@@ -124,7 +124,7 @@ lexer :: T.GenTokenParser String Identity
 lexer = T.makeTokenParser style
 
 parseBinaryOp :: P.Parser String BinaryOp
-parseBinaryOp = try $ do
+parseBinaryOp = try do
   lexer.reservedOp "-" *> pure Minus
     <|> lexer.reservedOp "+" *> pure Plus
     <|> lexer.reservedOp "/" *> pure Slash
@@ -161,28 +161,32 @@ parseUnaryExpr p = try $ do
   pure $ UnaryExpr op expr
 
 parseBinaryExpr :: P.Parser String Expr -> P.Parser String Expr
-parseBinaryExpr p = do
-  a <- p
+parseBinaryExpr p = try do
+  a <- nonBinaryExpr
   op <- parseBinaryOp
-  b <- p
+  b <- nonBinaryExpr
   pure $ BinaryExpr op a b
+  where
+  -- TODO: nested binary expressions
+  nonBinaryExpr = parseBool
+    <|> parseNumber
+    <|> parseGroupingExpr p
+    <|> parseUnaryExpr p
 
 parseGroupingExpr :: P.Parser String Expr -> P.Parser String Expr
 parseGroupingExpr p = do
   expr <- try $ lexer.parens p
   pure $ GroupingExpr expr
 
+-- Alternatively, could maybe use
+-- https://hackage.haskell.org/package/parsec-3.1.15.1/docs/Text-Parsec-Expr.html
 parseExpr :: P.Parser String Expr
 parseExpr = Lazy.fix $ \p ->
-  parseBool
-    <|> parseNumber
+  parseBinaryExpr p
     <|> parseGroupingExpr p
     <|> parseUnaryExpr p
-    <|> parseBinaryExpr p
-
--- parseExpr = buildExprParser table term <?> "expression"
--- -- https://hackage.haskell.org/package/parsec-3.1.15.1/docs/Text-Parsec-Expr.html
--- term = parseGroupingExpr <|>
+    <|> parseNumber
+    <|> parseBool
 
 readExpr :: String -> Either.Either P.ParseError Expr
 readExpr input = P.runParser input parseExpr
