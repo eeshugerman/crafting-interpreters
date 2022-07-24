@@ -14,8 +14,8 @@ to generate this file without the comments in this block.
 , dependencies =
   [ "arrays"
   , "console"
-  , "effect"
   , "control"
+  , "effect"
   , "either"
   , "identity"
   , "integers"
@@ -26,7 +26,7 @@ to generate this file without the comments in this block.
   , "node-readline"
   , "parsing"
   , "prelude"
-  -- , "psci-support"
+  , "psci-support"
   , "test-unit"
   ]
 , packages = ./packages.dhall
