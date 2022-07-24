@@ -11,11 +11,17 @@ import Test.Unit.Main (runTest)
 
 main :: Effect Unit
 main = runTest do
+  suite "comment" do
+    test "line comment" do
+      parseExprTest "begins" "1 // foo" loxOne
+      parseExprTest "ends" "// foo \n 1" loxOne
+    test "block comment" do
+      parseExprTest "begins and ends" "1 /* foo */ + 1" (BinaryExpr Plus loxOne loxOne)
+      parseExprTest "begins and ends with newline" "1 /* foo \n */ + 1" (BinaryExpr Plus loxOne loxOne)
   suite "literal" do
     test "bool" do
       parseExprTest "true" "true" loxTrue
       parseExprTest "false" "false" loxFalse
-
     test "positive number" do
       parseExprTest "integer" "1" loxOne
       parseExprTest "float" "1.0" loxOne
@@ -32,7 +38,9 @@ main = runTest do
         parseExprTest "not true" "!true" (UnaryExpr Bang loxTrue)
         parseExprTest "not true (whitespace)" "! true" (UnaryExpr Bang loxTrue)
       test "binary expr" do
+        parseExprTest "addition (no whitespace)" "1+1" (BinaryExpr Plus loxOne loxOne)
         parseExprTest "addition" "1 + 1" (BinaryExpr Plus loxOne loxOne)
+        parseExprTest "addition" "1 \n + 1 (extra whitespace)" (BinaryExpr Plus loxOne loxOne)
       test "grouping expr" do
         parseExprTest "literal" "(true)" (GroupingExpr loxTrue)
         parseExprTest "unary" "(!true)" (GroupingExpr $ UnaryExpr Bang loxTrue)
