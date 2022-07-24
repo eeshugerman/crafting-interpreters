@@ -6,7 +6,7 @@ import Data.Array (drop)
 import Data.Either as Either
 import Effect (Effect)
 import Effect.Console (log)
-import Lex (readExpr)
+import Parse (readExpr)
 import Node.Encoding as Encoding
 import Node.FS.Sync (readTextFile)
 import Node.Path (FilePath)
@@ -23,23 +23,23 @@ runFile filePath = do
 runPrompt :: Effect Unit
 runPrompt = do
   interface <- RL.createConsoleInterface RL.noCompletion
-  let lineHandler :: String -> Effect Unit
-      lineHandler line = do
-        log $ case readExpr line of
-          Either.Left err -> "Parse Error: " <> parseErrorMessage err
-          Either.Right tree -> show tree
-        RL.prompt interface
+  let
+    lineHandler :: String -> Effect Unit
+    lineHandler line = do
+      log $ case readExpr line of
+        Either.Left err -> "Parse Error: " <> parseErrorMessage err
+        Either.Right tree -> show tree
+      RL.prompt interface
   RL.setPrompt ">>> " interface
   RL.setLineHandler lineHandler interface
   RL.prompt interface
-
 
 main :: Effect Unit
 main = do
   commandLineArgs <- map (drop 2) argv
   case commandLineArgs of
     [] -> runPrompt
-    [filePath] -> runFile filePath
+    [ filePath ] -> runFile filePath
     _ -> do
       log "Usage: jlox [script]"
       exit 64

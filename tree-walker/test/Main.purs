@@ -3,7 +3,7 @@ module Test.Main where
 import Prelude
 
 import Effect (Effect)
-import Test.Lex as Lex
+import Test.Parse as Parse
 
 main :: Effect Unit
-main = Lex.main
+main = Parse.main

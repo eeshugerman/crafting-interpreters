@@ -1,4 +1,4 @@
-module Lex (Expr(..), readExpr, Literal(..), BinaryOp(..), UnaryOp(..)) where
+module Parse (Expr(..), readExpr, Literal(..), BinaryOp(..), UnaryOp(..)) where
 
 import Prelude
 

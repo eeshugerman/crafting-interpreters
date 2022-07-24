@@ -1,11 +1,11 @@
-module Test.Lex where
+module Test.Parse where
 
 import Prelude
 
 import Data.Either (Either(..))
 import Effect (Effect)
-import Lex (Expr(..), Literal(..), UnaryOp(..), BinaryOp(..), readExpr)
-import Test.Unit (Test, suite, test, timeout)
+import Parse (Expr(..), Literal(..), UnaryOp(..), BinaryOp(..), readExpr)
+import Test.Unit (Test, suite, test)
 import Test.Unit.Assert as Assert
 import Test.Unit.Main (runTest)
 
@@ -36,8 +36,7 @@ main = runTest do
       test "grouping expr" do
         parseExprTest "literal" "(true)" (GroupingExpr loxTrue)
         parseExprTest "unary" "(!true)" (GroupingExpr $ UnaryExpr Bang loxTrue)
-
--- parseExprTest "binary" "(1 + 1)" (GroupingExpr $ BinaryExpr loxOne Plus loxOne)
+        parseExprTest "binary" "(1 + 1)" (GroupingExpr $ BinaryExpr Plus loxOne loxOne)
 
 parseExprTest :: String -> String -> Expr -> Test
 parseExprTest msg src expected =
