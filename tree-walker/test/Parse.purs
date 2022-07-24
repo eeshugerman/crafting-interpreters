@@ -4,7 +4,7 @@ import Prelude
 
 import Data.Either (Either(..))
 import Effect (Effect)
-import Parse (Expr(..), Literal(..), UnaryOp(..), BinaryOp(..), readExpr)
+import Parse (BinaryOp(..), Expr(..), Literal(..), UnaryOp(..), readExpr)
 import Test.Unit (Test, suite, test)
 import Test.Unit.Assert as Assert
 import Test.Unit.Main (runTest)
@@ -40,8 +40,13 @@ main = runTest do
       parseExprTest "addition" "1 \n + 1 (extra whitespace)" (BinaryExpr Plus loxOne loxOne)
       parseExprTest "subtraction" "1 - 1" (BinaryExpr Minus loxOne loxOne)
       parseExprTest "subtraction (no whitespace)" "1-1" (BinaryExpr Minus loxOne loxOne)
-    -- TODO: nested binary expresssions
-    -- parseExprTest "addition three terms" "1 + 1 + 1" (BinaryExpr Plus (BinaryExpr Plus loxOne loxOne) loxOne)
+    test "addition associativity" do
+      parseExprTest "left (default)" "1 + 1 + 1" (BinaryExpr Plus (BinaryExpr Plus loxOne loxOne) loxOne)
+      parseExprTest "right" "1 + (1 + 1)" (BinaryExpr Plus loxOne (BinaryExpr Plus loxOne loxOne))
+    test "arithmetic precedence" do
+      parseExprTest "+ *" "1 + 1 * 1" (BinaryExpr Plus loxOne (BinaryExpr Star loxOne loxOne))
+      parseExprTest "- /" "1 - 1 / 1" (BinaryExpr Minus loxOne (BinaryExpr Slash loxOne loxOne))
+      parseExprTest "(+) *" "(1 + 1) * 1" (BinaryExpr Star (BinaryExpr Plus loxOne loxOne) loxOne)
     test "grouping expr" do
       parseExprTest "literal" "(true)" loxTrue
       parseExprTest "unary" "(!true)" (UnaryExpr Bang loxTrue)
@@ -67,9 +72,3 @@ loxOne = Literal $ LoxNumber 1.0
 
 loxOnePointOne :: Expr
 loxOnePointOne = Literal $ LoxNumber 1.1
-
-loxNegativeOne :: Expr
-loxNegativeOne = Literal $ LoxNumber (-1.0)
-
-loxNegativeOnePointOne :: Expr
-loxNegativeOnePointOne = Literal $ LoxNumber (-1.1)
