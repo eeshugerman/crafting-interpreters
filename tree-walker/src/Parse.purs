@@ -10,10 +10,9 @@ import Data.Identity (Identity)
 import Data.Int (toNumber)
 import Data.Show.Generic (genericShow)
 import Parsing as P
-import Parsing.Combinators (notFollowedBy, try, (<?>))
-import Parsing.Expr (buildExprParser)
+import Parsing.Combinators (choice, try)
 import Parsing.Language as L
-import Parsing.String (char, eof)
+import Parsing.String (char)
 import Parsing.String.Basic (alphaNum, letter)
 import Parsing.Token as T
 
@@ -124,7 +123,7 @@ lexer :: T.GenTokenParser String Identity
 lexer = T.makeTokenParser style
 
 binaryOp :: P.Parser String BinaryOp
-binaryOp = try do
+binaryOp =
   lexer.reservedOp "-" *> pure Minus
     <|> lexer.reservedOp "+" *> pure Plus
     <|> lexer.reservedOp "/" *> pure Slash
@@ -141,12 +140,12 @@ unaryOp :: P.Parser String UnaryOp
 unaryOp = lexer.reservedOp "!" *> pure Bang
 
 boolLiteral :: P.Parser String Expr
-boolLiteral = do
+boolLiteral =
   (lexer.reserved "true" *> (pure $ Literal $ LoxBool true))
     <|> (lexer.reserved "false" *> (pure $ Literal $ LoxBool false))
 
 numberLiteral :: P.Parser String Expr
-numberLiteral = try $ do
+numberLiteral = do
   num <- try lexer.float
     <|> try (char '+' *> lexer.float)
     <|> try (char '-' *> (map negate lexer.float))
@@ -175,7 +174,7 @@ binaryExpr p = try do
 
 groupingExpr :: P.Parser String Expr -> P.Parser String Expr
 groupingExpr p = do
-  expr' <- try $ lexer.parens p
+  expr' <- lexer.parens p
   pure $ GroupingExpr expr'
 
 -- Alternatively, could maybe use
