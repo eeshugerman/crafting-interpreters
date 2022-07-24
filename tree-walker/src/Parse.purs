@@ -41,7 +41,7 @@ data BinaryOp
   | Less
   | LessEqual
 
-data UnaryOp = Bang
+data UnaryOp = Bang | Negative
 
 derive instance genericExpr :: Generic Expr _
 instance showExpr :: Show Expr where
@@ -138,23 +138,23 @@ binaryOp = choice
   ]
 
 unaryOp :: P.Parser String UnaryOp
-unaryOp = lexer.reservedOp "!" *> pure Bang
+unaryOp = choice
+  [ lexer.reservedOp "!" *> pure Bang
+  , lexer.reservedOp "-" *> pure Negative
+  ]
 
 boolLiteral :: P.Parser String Expr
-boolLiteral = choice
-  [ (lexer.reserved "true" *> (pure $ Literal $ LoxBool true))
-  , (lexer.reserved "false" *> (pure $ Literal $ LoxBool false))
+boolLiteral = map (Literal <<< LoxBool) $ choice
+  [ (lexer.reserved "true" *> pure true)
+  , (lexer.reserved "false" *> pure false)
   ]
 
 numberLiteral :: P.Parser String Expr
 numberLiteral =
-  map (Literal <<< LoxNumber)
-    $ choice
-        [ try lexer.float
-        , try (char '+' *> lexer.float)
-        , try (char '-' *> (map negate lexer.float))
-        , try (map toNumber lexer.integer)
-        ]
+  map (Literal <<< LoxNumber) $ choice
+    [ try lexer.float
+    , map toNumber lexer.integer
+    ]
 
 unaryExpr :: P.Parser String Expr -> P.Parser String Expr
 unaryExpr p = do
@@ -185,7 +185,7 @@ groupingExpr p = do
 -- Alternatively, could maybe use
 -- https://hackage.haskell.org/package/parsec-3.1.15.1/docs/Text-Parsec-Expr.html
 expr :: P.Parser String Expr
-expr = Lazy.fix $ \p -> choice
+expr = Lazy.fix \p -> choice
   [ binaryExpr p
   , groupingExpr p
   , unaryExpr p

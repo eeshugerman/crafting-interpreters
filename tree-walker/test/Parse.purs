@@ -26,21 +26,18 @@ main = runTest do
       parseExprTest "integer" "1" loxOne
       parseExprTest "float" "1.0" loxOne
       parseExprTest "floaty float" "1.1" loxOnePointOne
-      parseExprTest "posy integer" "+1" loxOne
-      parseExprTest "posy float" "+1.0" loxOne
-      parseExprTest "posy floaty float" "+1.1" loxOnePointOne
-    test "negative number" do
-      parseExprTest "integer" "-1" loxNegativeOne
-      parseExprTest "float" "-1.0" loxNegativeOne
-      parseExprTest "floaty float" "-1.1" loxNegativeOnePointOne
   suite "compound expressions" do
     test "unary expr" do
       parseExprTest "not true" "!true" (UnaryExpr Bang loxTrue)
       parseExprTest "not true (whitespace)" "! true" (UnaryExpr Bang loxTrue)
+      parseExprTest "negative 1" "-1" (UnaryExpr Negative loxOne)
+      parseExprTest "negative 1 (whitespace)" "- 1" (UnaryExpr Negative loxOne)
     test "binary expr" do
       parseExprTest "addition (no whitespace)" "1+1" (BinaryExpr Plus loxOne loxOne)
       parseExprTest "addition" "1 + 1" (BinaryExpr Plus loxOne loxOne)
       parseExprTest "addition" "1 \n + 1 (extra whitespace)" (BinaryExpr Plus loxOne loxOne)
+      parseExprTest "subtraction" "1 - 1" (BinaryExpr Minus loxOne loxOne)
+      parseExprTest "subtraction (no whitespace)" "1-1" (BinaryExpr Minus loxOne loxOne)
     -- TODO: nested binary expresssions
     -- parseExprTest "addition three terms" "1 + 1 + 1" (BinaryExpr Plus (BinaryExpr Plus loxOne loxOne) loxOne)
     test "grouping expr" do
