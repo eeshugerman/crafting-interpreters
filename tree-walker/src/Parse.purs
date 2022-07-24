@@ -17,6 +17,8 @@ import Parsing.String (char)
 import Parsing.String.Basic (alphaNum, letter)
 import Parsing.Token as T
 
+-- types
+
 data Expr
   = Literal Literal
   | UnaryExpr UnaryOp Expr
@@ -64,6 +66,66 @@ derive instance eqExpr :: Eq Expr
 derive instance eqLiteral :: Eq Literal
 derive instance eqUnaryOp :: Eq UnaryOp
 derive instance eqBinaryOp :: Eq BinaryOp
+
+-- vals
+readExpr :: String -> Either.Either P.ParseError Expr
+readExpr input = P.runParser input expr
+
+expr :: P.Parser String Expr
+expr = Lazy.fix \p -> buildExprParser table (term p)
+
+table :: OperatorTable Identity String Expr
+table =
+  [ [ -- Unary
+      Prefix $ try (lexer.reservedOp "!" $> UnaryExpr Bang)
+    , Prefix (lexer.reservedOp "-" $> UnaryExpr Negative)
+    ]
+  , [ -- Factor
+      Infix (lexer.reservedOp "/" $> BinaryExpr Slash) AssocLeft
+    , Infix (lexer.reservedOp "*" $> BinaryExpr Star) AssocLeft
+    ]
+  , [ -- Term
+      Infix (lexer.reservedOp "-" $> BinaryExpr Minus) AssocLeft
+    , Infix (lexer.reservedOp "+" $> BinaryExpr Plus) AssocLeft
+    ]
+  , [ -- Comparison
+      Infix (lexer.reservedOp ">" $> BinaryExpr Greater) AssocLeft
+    , Infix (lexer.reservedOp ">=" $> BinaryExpr GreaterEqual) AssocLeft
+    , Infix (lexer.reservedOp "<" $> BinaryExpr Less) AssocLeft
+    , Infix (lexer.reservedOp "<=" $> BinaryExpr LessEqual) AssocLeft
+    ]
+  , [ -- Equality
+      Infix (lexer.reservedOp "==" $> BinaryExpr EqualEqual) AssocLeft
+    , Infix (lexer.reservedOp "!=" $> BinaryExpr BangEqual) AssocLeft
+    ]
+  ]
+
+term :: P.Parser String Expr -> P.Parser String Expr
+term p = choice
+  [ lexer.parens p
+  , nilLiteral
+  , numberLiteral
+  , boolLiteral
+  ]
+
+boolLiteral :: P.Parser String Expr
+boolLiteral = map (Literal <<< LoxBool) $ choice
+  [ (lexer.reserved "true" *> pure true)
+  , (lexer.reserved "false" *> pure false)
+  ]
+
+numberLiteral :: P.Parser String Expr
+numberLiteral =
+  map (Literal <<< LoxNumber) $ choice
+    [ try lexer.float
+    , map toNumber lexer.integer
+    ]
+
+nilLiteral :: P.Parser String Expr
+nilLiteral = lexer.reserved "nil" *> (pure $ Literal $ Nil)
+
+lexer :: T.GenTokenParser String Identity
+lexer = T.makeTokenParser style
 
 style :: T.LanguageDef
 style = T.LanguageDef (T.unGenLanguageDef L.emptyDef)
@@ -119,62 +181,3 @@ style = T.LanguageDef (T.unGenLanguageDef L.emptyDef)
       ]
   , caseSensitive = true
   }
-
-lexer :: T.GenTokenParser String Identity
-lexer = T.makeTokenParser style
-
-boolLiteral :: P.Parser String Expr
-boolLiteral = map (Literal <<< LoxBool) $ choice
-  [ (lexer.reserved "true" *> pure true)
-  , (lexer.reserved "false" *> pure false)
-  ]
-
-numberLiteral :: P.Parser String Expr
-numberLiteral =
-  map (Literal <<< LoxNumber) $ choice
-    [ try lexer.float
-    , map toNumber lexer.integer
-    ]
-
-nilLiteral :: P.Parser String Expr
-nilLiteral = lexer.reserved "nil" *> (pure $ Literal $ Nil)
-
-expr :: P.Parser String Expr
-expr = Lazy.fix \p -> buildExprParser table (term p)
-
-table :: OperatorTable Identity String Expr
-table =
-  [ [ -- Unary
-      Prefix $ try (lexer.reservedOp "!" $> UnaryExpr Bang)
-    , Prefix (lexer.reservedOp "-" $> UnaryExpr Negative)
-    ]
-  , [ -- Factor
-      Infix (lexer.reservedOp "/" $> BinaryExpr Slash) AssocLeft
-    , Infix (lexer.reservedOp "*" $> BinaryExpr Star) AssocLeft
-    ]
-  , [ -- Term
-      Infix (lexer.reservedOp "-" $> BinaryExpr Minus) AssocLeft
-    , Infix (lexer.reservedOp "+" $> BinaryExpr Plus) AssocLeft
-    ]
-  , [ -- Comparison
-      Infix (lexer.reservedOp ">" $> BinaryExpr Greater) AssocLeft
-    , Infix (lexer.reservedOp ">=" $> BinaryExpr GreaterEqual) AssocLeft
-    , Infix (lexer.reservedOp "<" $> BinaryExpr Less) AssocLeft
-    , Infix (lexer.reservedOp "<=" $> BinaryExpr LessEqual) AssocLeft
-    ]
-  , [ -- Equality
-      Infix (lexer.reservedOp "==" $> BinaryExpr EqualEqual) AssocLeft
-    , Infix (lexer.reservedOp "!=" $> BinaryExpr BangEqual) AssocLeft
-    ]
-  ]
-
-term :: P.Parser String Expr -> P.Parser String Expr
-term p = choice
-  [ lexer.parens p
-  , nilLiteral
-  , numberLiteral
-  , boolLiteral
-  ]
-
-readExpr :: String -> Either.Either P.ParseError Expr
-readExpr input = P.runParser input expr
