@@ -123,8 +123,8 @@ style = T.LanguageDef (T.unGenLanguageDef L.emptyDef)
 lexer :: T.GenTokenParser String Identity
 lexer = T.makeTokenParser style
 
-parseBinaryOp :: P.Parser String BinaryOp
-parseBinaryOp = try do
+binaryOp :: P.Parser String BinaryOp
+binaryOp = try do
   lexer.reservedOp "-" *> pure Minus
     <|> lexer.reservedOp "+" *> pure Plus
     <|> lexer.reservedOp "/" *> pure Slash
@@ -137,56 +137,56 @@ parseBinaryOp = try do
     <|> lexer.reservedOp "<" *> pure Less
     <|> lexer.reservedOp "<=" *> pure LessEqual
 
-parseUnaryOp :: P.Parser String UnaryOp
-parseUnaryOp = lexer.reservedOp "!" *> pure Bang
+unaryOp :: P.Parser String UnaryOp
+unaryOp = lexer.reservedOp "!" *> pure Bang
 
-parseBool :: P.Parser String Expr
-parseBool = do
+boolLiteral :: P.Parser String Expr
+boolLiteral = do
   (lexer.reserved "true" *> (pure $ Literal $ LoxBool true))
     <|> (lexer.reserved "false" *> (pure $ Literal $ LoxBool false))
 
-parseNumber :: P.Parser String Expr
-parseNumber = try $ do
+numberLiteral :: P.Parser String Expr
+numberLiteral = try $ do
   num <- try lexer.float
     <|> try (char '+' *> lexer.float)
     <|> try (char '-' *> (map negate lexer.float))
     <|> try (map toNumber lexer.integer)
-  -- notFollowedBy parseBinaryOp
+  -- notFollowedBy binaryOp
   pure $ Literal $ LoxNumber num
 
-parseUnaryExpr :: P.Parser String Expr -> P.Parser String Expr
-parseUnaryExpr p = try $ do
-  op <- parseUnaryOp
-  expr <- p
-  pure $ UnaryExpr op expr
+unaryExpr :: P.Parser String Expr -> P.Parser String Expr
+unaryExpr p = try $ do
+  op <- unaryOp
+  expr' <- p
+  pure $ UnaryExpr op expr'
 
-parseBinaryExpr :: P.Parser String Expr -> P.Parser String Expr
-parseBinaryExpr p = try do
+binaryExpr :: P.Parser String Expr -> P.Parser String Expr
+binaryExpr p = try do
   a <- nonBinaryExpr
-  op <- parseBinaryOp
+  op <- binaryOp
   b <- nonBinaryExpr
   pure $ BinaryExpr op a b
   where
   -- TODO: nested binary expressions
-  nonBinaryExpr = parseBool
-    <|> parseNumber
-    <|> parseGroupingExpr p
-    <|> parseUnaryExpr p
+  nonBinaryExpr = boolLiteral
+    <|> numberLiteral
+    <|> groupingExpr p
+    <|> unaryExpr p
 
-parseGroupingExpr :: P.Parser String Expr -> P.Parser String Expr
-parseGroupingExpr p = do
-  expr <- try $ lexer.parens p
-  pure $ GroupingExpr expr
+groupingExpr :: P.Parser String Expr -> P.Parser String Expr
+groupingExpr p = do
+  expr' <- try $ lexer.parens p
+  pure $ GroupingExpr expr'
 
 -- Alternatively, could maybe use
 -- https://hackage.haskell.org/package/parsec-3.1.15.1/docs/Text-Parsec-Expr.html
-parseExpr :: P.Parser String Expr
-parseExpr = Lazy.fix $ \p ->
-  parseBinaryExpr p
-    <|> parseGroupingExpr p
-    <|> parseUnaryExpr p
-    <|> parseNumber
-    <|> parseBool
+expr :: P.Parser String Expr
+expr = Lazy.fix $ \p ->
+  binaryExpr p
+    <|> groupingExpr p
+    <|> unaryExpr p
+    <|> numberLiteral
+    <|> boolLiteral
 
 readExpr :: String -> Either.Either P.ParseError Expr
-readExpr input = P.runParser input parseExpr
+readExpr input = P.runParser input expr
