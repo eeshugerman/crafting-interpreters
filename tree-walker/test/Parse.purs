@@ -19,6 +19,8 @@ main = runTest do
       parseExprTest "begins and ends" "1 /* foo */ + 1" (BinaryExpr Plus loxOne loxOne)
       parseExprTest "begins and ends with newline" "1 /* foo \n */ + 1" (BinaryExpr Plus loxOne loxOne)
   suite "literal" do
+    test "nil" do
+      parseExprTest "nil" "nil" loxNil
     test "bool" do
       parseExprTest "true" "true" loxTrue
       parseExprTest "false" "false" loxFalse
@@ -50,6 +52,9 @@ parseExprTest msg src expected =
   Assert.assert msg $ case readExpr src of
     Left _err -> false
     Right actual -> actual == expected
+
+loxNil :: Expr
+loxNil = Literal $ Nil
 
 loxTrue :: Expr
 loxTrue = Literal $ LoxBool true

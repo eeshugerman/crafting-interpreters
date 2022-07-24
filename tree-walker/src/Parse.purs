@@ -156,6 +156,9 @@ numberLiteral =
     , map toNumber lexer.integer
     ]
 
+nilLiteral :: P.Parser String Expr
+nilLiteral = lexer.reserved "nil" *> (pure $ Literal $ Nil)
+
 unaryExpr :: P.Parser String Expr -> P.Parser String Expr
 unaryExpr p = do
   op <- unaryOp
@@ -189,6 +192,7 @@ expr = Lazy.fix \p -> choice
   [ binaryExpr p
   , groupingExpr p
   , unaryExpr p
+  , nilLiteral
   , numberLiteral
   , boolLiteral
   ]
