@@ -43,9 +43,9 @@ main = runTest do
     -- TODO: nested binary expresssions
     -- parseExprTest "addition three terms" "1 + 1 + 1" (BinaryExpr Plus (BinaryExpr Plus loxOne loxOne) loxOne)
     test "grouping expr" do
-      parseExprTest "literal" "(true)" (GroupingExpr loxTrue)
-      parseExprTest "unary" "(!true)" (GroupingExpr $ UnaryExpr Bang loxTrue)
-      parseExprTest "binary" "(1 + 1)" (GroupingExpr $ BinaryExpr Plus loxOne loxOne)
+      parseExprTest "literal" "(true)" loxTrue
+      parseExprTest "unary" "(!true)" (UnaryExpr Bang loxTrue)
+      parseExprTest "binary" "(1 + 1)" (BinaryExpr Plus loxOne loxOne)
 
 parseExprTest :: String -> String -> Expr -> Test
 parseExprTest msg src expected =

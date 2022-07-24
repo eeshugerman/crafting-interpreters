@@ -11,6 +11,7 @@ import Data.Int (toNumber)
 import Data.Show.Generic (genericShow)
 import Parsing as P
 import Parsing.Combinators (choice, try)
+import Parsing.Expr (Assoc(..), Operator(..), OperatorTable, buildExprParser)
 import Parsing.Language as L
 import Parsing.String (char)
 import Parsing.String.Basic (alphaNum, letter)
@@ -122,27 +123,6 @@ style = T.LanguageDef (T.unGenLanguageDef L.emptyDef)
 lexer :: T.GenTokenParser String Identity
 lexer = T.makeTokenParser style
 
-binaryOp :: P.Parser String BinaryOp
-binaryOp = choice
-  [ lexer.reservedOp "-" *> pure Minus
-  , lexer.reservedOp "+" *> pure Plus
-  , lexer.reservedOp "/" *> pure Slash
-  , lexer.reservedOp "*" *> pure Star
-  , lexer.reservedOp "!=" *> pure BangEqual
-  , lexer.reservedOp "=" *> pure Equal
-  , lexer.reservedOp "==" *> pure EqualEqual
-  , lexer.reservedOp ">" *> pure Greater
-  , lexer.reservedOp ">=" *> pure GreaterEqual
-  , lexer.reservedOp "<" *> pure Less
-  , lexer.reservedOp "<=" *> pure LessEqual
-  ]
-
-unaryOp :: P.Parser String UnaryOp
-unaryOp = choice
-  [ lexer.reservedOp "!" *> pure Bang
-  , lexer.reservedOp "-" *> pure Negative
-  ]
-
 boolLiteral :: P.Parser String Expr
 boolLiteral = map (Literal <<< LoxBool) $ choice
   [ (lexer.reserved "true" *> pure true)
@@ -159,39 +139,38 @@ numberLiteral =
 nilLiteral :: P.Parser String Expr
 nilLiteral = lexer.reserved "nil" *> (pure $ Literal $ Nil)
 
-unaryExpr :: P.Parser String Expr -> P.Parser String Expr
-unaryExpr p = do
-  op <- unaryOp
-  expr' <- p
-  pure $ UnaryExpr op expr'
-
-binaryExpr :: P.Parser String Expr -> P.Parser String Expr
-binaryExpr p = try do
-  a <- nonBinaryExpr
-  op <- binaryOp
-  b <- nonBinaryExpr
-  pure $ BinaryExpr op a b
-  where
-  -- TODO: nested binary expressions
-  nonBinaryExpr = choice
-    [ boolLiteral
-    , numberLiteral
-    , groupingExpr p
-    , unaryExpr p
-    ]
-
-groupingExpr :: P.Parser String Expr -> P.Parser String Expr
-groupingExpr p = do
-  expr' <- lexer.parens p
-  pure $ GroupingExpr expr'
-
--- Alternatively, could maybe use
--- https://hackage.haskell.org/package/parsec-3.1.15.1/docs/Text-Parsec-Expr.html
 expr :: P.Parser String Expr
-expr = Lazy.fix \p -> choice
-  [ binaryExpr p
-  , groupingExpr p
-  , unaryExpr p
+expr = Lazy.fix \p -> buildExprParser table (term p)
+
+table :: OperatorTable Identity String Expr
+table =
+  [ [ -- Unary
+      Prefix $ try (lexer.reservedOp "!" $> UnaryExpr Bang)
+    , Prefix (lexer.reservedOp "-" $> UnaryExpr Negative)
+    ]
+  , [ -- Factor
+      Infix (lexer.reservedOp "/" $> BinaryExpr Slash) AssocLeft
+    , Infix (lexer.reservedOp "*" $> BinaryExpr Star) AssocLeft
+    ]
+  , [ -- Term
+      Infix (lexer.reservedOp "-" $> BinaryExpr Minus) AssocLeft
+    , Infix (lexer.reservedOp "+" $> BinaryExpr Plus) AssocLeft
+    ]
+  , [ -- Comparison
+      Infix (lexer.reservedOp ">" $> BinaryExpr Greater) AssocLeft
+    , Infix (lexer.reservedOp ">=" $> BinaryExpr GreaterEqual) AssocLeft
+    , Infix (lexer.reservedOp "<" $> BinaryExpr Less) AssocLeft
+    , Infix (lexer.reservedOp "<=" $> BinaryExpr LessEqual) AssocLeft
+    ]
+  , [ -- Equality
+      Infix (lexer.reservedOp "==" $> BinaryExpr EqualEqual) AssocLeft
+    , Infix (lexer.reservedOp "!=" $> BinaryExpr BangEqual) AssocLeft
+    ]
+  ]
+
+term :: P.Parser String Expr -> P.Parser String Expr
+term p = choice
+  [ lexer.parens p
   , nilLiteral
   , numberLiteral
   , boolLiteral
